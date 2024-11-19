@@ -1,0 +1,10 @@
+{
+  "tasks": {
+    "dev": "deno run --watch main.ts"
+  },
+  "imports": {
+    "@atproto/api": "npm:@atproto/api@^0.13.16",
+    "@std/assert": "jsr:@std/assert@1",
+    "rss-parser": "npm:rss-parser@^3.13.0"
+  }
+}
