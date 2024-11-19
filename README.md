@@ -9,7 +9,7 @@ for other RSS feeds, but some rigidity is needed to extract the Wikimedia Common
 - Initialize `persistent.json` with `{ "lastPubDate": 0 }`
 - Run:
   - Without Docker: `deno task start` (`deno run --env-file=.env --allow-env --allow-net --allow-write main.ts`)
-  - With Docker: `docker build -t rss-to-atp . && docker run -d --name wikimedia-commons-daily-bluesky rss-to-atp`
+  - With Docker: `docker build -t rss-to-atp . && docker run -d --restart=always --name wikimedia-commons-daily-bluesky rss-to-atp`
 
 ## Notice
 
