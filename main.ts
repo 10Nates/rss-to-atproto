@@ -118,7 +118,7 @@ async function main() {
           }],
         },
       });
-      console.log("Posted: " + post);
+      console.log("Posted: " + post.cid + " / " + post.uri);
     } catch (error) {
       console.error(error);
     }
