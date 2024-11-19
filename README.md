@@ -7,7 +7,7 @@ for other RSS feeds, but some rigidity is needed to extract the Wikimedia Common
 
 - Make a .env file with the variables `ATP_USERNAME` and `ATP_PASSWORD` (must be an [App Password](https://bsky.app/settings/app-passwords))
   - Alternatively, you can just set them as environment variables
-- Remove `lastPubDate` from `persistent.json` if on a new account (this keeps track of what has already been posted)
+- Initialize `persistent.json` with `{ "lastPubDate": 0 }`
 - Run `deno task start` (`deno run --env-file=.env --allow-env --allow-net --allow-write main.ts`)
 
 ## Notice
