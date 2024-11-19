@@ -5,10 +5,11 @@ for other RSS feeds, but some rigidity is needed to extract the Wikimedia Common
 
 ## Operation
 
-- Make a .env file with the variables `ATP_USERNAME` and `ATP_PASSWORD` (must be an [App Password](https://bsky.app/settings/app-passwords))
-  - Alternatively, you can just set them as environment variables
+- Make a `.env` file with the variables `ATP_USERNAME` and `ATP_PASSWORD` (must be an [App Password](https://bsky.app/settings/app-passwords))
 - Initialize `persistent.json` with `{ "lastPubDate": 0 }`
-- Run `deno task start` (`deno run --env-file=.env --allow-env --allow-net --allow-write main.ts`)
+- Run:
+  - Without Docker: `deno task start` (`deno run --env-file=.env --allow-env --allow-net --allow-write main.ts`)
+  - With Docker: `docker build -t rss-to-atp . && docker run -d --name wikimedia-commons-daily-bluesky rss-to-atp`
 
 ## Notice
 
