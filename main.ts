@@ -8,6 +8,12 @@ const MISSING_IMG_REPLACE =
   "https://upload.wikimedia.org/wikipedia/commons/a/a2/Nuvola_apps_error.svg";
 const MISSING_DESCRIPTION_REPLACE = "No description provided";
 const IMAGE_ALT_TEXT = "Wikimedia Commons image of the day";
+const POST_TAGS = [
+  "wikimedia",
+  "pictureoftheday",
+  "creativecommons",
+  "photography",
+]
 const IMAGE_THUMB_SIZE = 800;
 const UPDATE_FREQ = 10 * 1000; // in ms
 const ATP_PROVIDER = "https://bsky.social";
@@ -101,12 +107,7 @@ async function main() {
       const embed_blob = await CreateEmbed(parsedItem.img_src);
       const post = await atp_agent.post({
         text: parsedItem.contentSnippet,
-        tags: [
-          "wikimedia",
-          "pictureoftheday",
-          "creativecommons",
-          "photography",
-        ],
+        tags: POST_TAGS,
         embed: {
           "$type": "app.bsky.embed.images",
           "images": [{
