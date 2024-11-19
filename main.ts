@@ -109,6 +109,7 @@ async function main() {
         text: parsedItem.contentSnippet,
         tags: POST_TAGS,
         langs: ["en-US"],
+        createdAt: new Date().toISOString(),
         embed: {
           "$type": "app.bsky.embed.images",
           "images": [{
