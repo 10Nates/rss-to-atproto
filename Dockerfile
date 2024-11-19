@@ -2,9 +2,9 @@ FROM denoland/deno:2.0.6
 
 WORKDIR /app
 
-USER deno
+COPY --chown=deno:deno . .
 
-COPY . .
+USER deno
 
 RUN deno cache main.ts
 

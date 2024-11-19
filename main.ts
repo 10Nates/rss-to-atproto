@@ -108,6 +108,8 @@ async function main() {
       const post = await atp_agent.post({
         text: parsedItem.contentSnippet,
         tags: POST_TAGS,
+        langs: ["en-US"],
+        createdAt: new Date().toISOString().replace('+00:00', 'Z'),
         embed: {
           "$type": "app.bsky.embed.images",
           "images": [{
