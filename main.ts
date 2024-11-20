@@ -97,11 +97,6 @@ async function main() {
       // Greater than, update detected
       console.log("New RSS post detected");
 
-      // prevent reposts
-      lastPubDate = pubDateTime;
-      persistent.lastPubDate = pubDateTime.getTime();
-      Deno.writeTextFileSync("./persistent.json", JSON.stringify(persistent));
-
       const parsedItem = ParseItem(latestItem);
 
       const embed_blob = await CreateEmbed(parsedItem.img_src);
@@ -118,7 +113,14 @@ async function main() {
           }],
         },
       });
+
       console.log("Posted: " + post.cid + " / " + post.uri);
+
+      // prevent reposts
+      lastPubDate = pubDateTime;
+      persistent.lastPubDate = pubDateTime.getTime();
+      Deno.writeTextFileSync("./persistent.json", JSON.stringify(persistent));
+      
     } catch (error) {
       console.error(error);
     }
