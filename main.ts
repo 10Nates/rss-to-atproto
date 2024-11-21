@@ -15,7 +15,7 @@ const POST_TAGS = [
   "photography",
 ]
 const IMAGE_THUMB_SIZE = 800;
-const UPDATE_FREQ = 10 * 1000; // in ms
+const UPDATE_FREQ = 60 * 1000; // in ms
 const ATP_PROVIDER = "https://bsky.social";
 
 const parser = new Parser();
@@ -85,7 +85,7 @@ async function main() {
     password: Deno.env.get("ATP_PASSWORD") || "",
   });
   const atp_agent = new Agent(atp_session);
-  atp_agent.assertDid;
+  const _ = atp_agent.assertAuthenticated();
 
   let lastPubDate: Date = new Date(persistent.lastPubDate); // load last post
 
@@ -98,6 +98,9 @@ async function main() {
       console.log("New RSS post detected");
 
       const parsedItem = ParseItem(latestItem);
+
+      // refresh sesion if needed
+      if (!(atp_session.hasSession && atp_session.session?.active)) await atp_session.refreshSession();
 
       const embed_blob = await CreateEmbed(parsedItem.img_src);
       const post = await atp_agent.post({
@@ -123,6 +126,7 @@ async function main() {
       
     } catch (error) {
       console.error(error);
+      throw error;
     }
   }, UPDATE_FREQ);
 }
