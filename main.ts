@@ -100,7 +100,10 @@ async function main() {
       const parsedItem = ParseItem(latestItem);
 
       // refresh sesion if needed
-      if (!(atp_session.hasSession && atp_session.session?.active)) await atp_session.refreshSession();
+      if (!(atp_session.hasSession && atp_session.session?.active)) {
+        console.log("Refreshing session...");
+        await atp_session.refreshSession();
+      }
 
       const embed_blob = await CreateEmbed(parsedItem.img_src);
       const post = await atp_agent.post({
