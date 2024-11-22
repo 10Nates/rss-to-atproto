@@ -89,7 +89,7 @@ async function main() {
 
   let lastPubDate: Date = new Date(persistent.lastPubDate); // load last post
 
-  setInterval(async () => {
+  const loop = setInterval(async () => {
     try {
       const latestItem = await GetLatestItem();
       const pubDateTime = new Date(latestItem.pubDate ? latestItem.pubDate : 0);
@@ -131,7 +131,14 @@ async function main() {
       throw error;
     }
   }, UPDATE_FREQ);
-}
+  
+  // Graceful exit
+  Deno.addSignalListener("SIGTERM", () => {
+    console.log("Exiting...")
+    clearInterval(loop);
+    atp_session.logout().catch((err) => console.error(err));
+  });
+} 
 
 if (import.meta.main) {
   main();
