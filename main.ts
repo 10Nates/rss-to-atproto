@@ -139,7 +139,10 @@ async function main() {
     atp_session.logout().finally(() => {
       Deno.exit(0);
     });
-    setTimeout(() => { Deno.exit(0)}, 1000);
+    setTimeout(() => {
+      console.log("Logout timed out, forcing exit."); 
+      Deno.exit(1)
+    }, 2000);
   }
   Deno.addSignalListener("SIGTERM", exit);
   Deno.addSignalListener("SIGINT", exit);
