@@ -85,7 +85,7 @@ async function main() {
     password: Deno.env.get("ATP_PASSWORD") || "",
   });
   const atp_agent = new Agent(atp_session);
-  const _ = atp_agent.assertAuthenticated();
+  atp_agent.assertDid;
 
   let lastPubDate: Date = new Date(persistent.lastPubDate); // load last post
 
@@ -99,13 +99,13 @@ async function main() {
 
       const parsedItem = ParseItem(latestItem);
 
-      // refresh sesion if needed
-      if (!(atp_session.hasSession && atp_session.session?.active)) {
-        console.log("Refreshing session...");
-        await atp_session.refreshSession();
-      }
+      // Bot uploads very infrequently so this is required
+      console.log("Refreshing session...");
+      await atp_session.refreshSession();
 
+      console.log("Uploading image...");
       const embed_blob = await CreateEmbed(parsedItem.img_src);
+
       const post = await atp_agent.post({
         text: parsedItem.contentSnippet,
         tags: POST_TAGS,
@@ -119,7 +119,6 @@ async function main() {
           }],
         },
       });
-
       console.log("Posted: " + post.cid + " / " + post.uri);
 
       // prevent reposts
