@@ -133,13 +133,16 @@ async function main() {
   }, UPDATE_FREQ);
   
   // Graceful exit
-  Deno.addSignalListener("SIGTERM", () => {
+  function exit() {
     console.log("Exiting...")
     clearInterval(loop);
     atp_session.logout().finally(() => {
       Deno.exit(0);
     });
-  });
+    setTimeout(() => { Deno.exit(0)}, 1000);
+  }
+  Deno.addSignalListener("SIGTERM", exit);
+  Deno.addSignalListener("SIGINT", exit);
 } 
 
 if (import.meta.main) {
