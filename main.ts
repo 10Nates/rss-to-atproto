@@ -99,6 +99,9 @@ async function main() {
 
       const parsedItem = ParseItem(latestItem);
 
+      // Text cannot exceed 300 graphemes
+      const limitedText = 300 < parsedItem.contentSnippet.length ? parsedItem.contentSnippet.slice(0, 297) + "..." : parsedItem.contentSnippet;
+
       // Bot uploads very infrequently so this is required
       console.log("Refreshing session...");
       await atp_session.refreshSession();
@@ -107,7 +110,7 @@ async function main() {
       const embed_blob = await CreateEmbed(parsedItem.img_src);
 
       const post = await atp_agent.post({
-        text: parsedItem.contentSnippet,
+        text: limitedText,
         tags: POST_TAGS,
         langs: ["en-US"],
         createdAt: new Date().toISOString(),
