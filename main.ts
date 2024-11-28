@@ -4,8 +4,10 @@ import persistent from "./persistent.json" with { type: "json" };
 
 const RSS_FEED =
   "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=rss&language=en";
+const DOMAIN = "https://commons.wikimedia.org"
 const MISSING_IMG_REPLACE =
   "https://upload.wikimedia.org/wikipedia/commons/a/a2/Nuvola_apps_error.svg";
+const MISSING_IMG_ID_REPLACE = "File:Nuvola_apps_error.svg"
 const MISSING_SOURCE_REPLACE = "Error parsing image source"
 const MISSING_DESCRIPTION_REPLACE = "No description provided";
 const IMAGE_ALT_TEXT = "Wikimedia Commons image of the day";
@@ -34,18 +36,20 @@ async function GetLatestItem(): Promise<Parser.Item> {
 
 function ParseItem(
   item: Parser.Item,
-): { img_src: string; img_source: string; contentSnippet: string } {
+): { img_src: string; img_source: string; img_id: string; contentSnippet: string } {
   const imgSrcMatch = item.content?.match(/src="([^"]+)"/);
   const imgSourceMatch = item.content?.match(/href="([^"]+?File:[^"]+?)"/)
 
   let imgSrc = imgSrcMatch ? imgSrcMatch[1] : MISSING_IMG_REPLACE;
   imgSrc = imgSrc.replace(/\/(\d+?)px/, "/" + IMAGE_THUMB_SIZE + "px");
 
-  const imgSource = imgSourceMatch ? "https://commons.wikimedia.org" + imgSourceMatch[1] : MISSING_SOURCE_REPLACE;
+  const imgSource = imgSourceMatch ? DOMAIN + encodeURIComponent(imgSourceMatch[1]) : MISSING_SOURCE_REPLACE;
+  const imgID = imgSourceMatch ? imgSourceMatch[1].replace("/wiki/", "") : MISSING_IMG_ID_REPLACE;
 
   return {
     img_src: imgSrc,
     img_source: imgSource,
+    img_id: imgID,
     contentSnippet: item.contentSnippet || MISSING_DESCRIPTION_REPLACE,
   };
 }
@@ -100,6 +104,33 @@ function chunkText(text: string): string[] {
   return chunks;
 }
 
+async function getAuthorInfo(img_id: string): Promise<{ author: string; source: string }> {
+  // https://commons.wikimedia.org/w/api.php?action=parse&format=json&page=%IMG_ID%&prop=wikitext&formatversion=2
+  const api_url = `https://commons.wikimedia.org/w/api.php?action=parse&format=json&page=${encodeURIComponent(img_id)}&prop=wikitext&formatversion=2`;
+  const response = await fetch(api_url);
+  if (!response.ok) {
+      throw new Error(`Failed to fetch author info: ${response.statusText}`);
+  }
+  const data = await response.json();
+  const wikitext = data.parse.wikitext;
+  console.log(wikitext);
+  const authorMatch = wikitext.match(/author\s{0,}=(.+?)\n/i);
+  const sourceMatch = wikitext.match(/source\s{0,}=(.+?)\n/i);
+
+  // strip formatting
+  let author: string = authorMatch ? authorMatch[1].replace(/\[|\]|\{|\}/g, '') : "Unknown";
+  author = author.split("|").at(-1) || author; // handle case where author is a reference 
+
+  if (sourceMatch && sourceMatch[1] === "{{own}}") sourceMatch[1] = "Own work"; // Wikimedia formatting for self-publishing
+  const source = sourceMatch ? sourceMatch[1].replace(/\[|\]|\{|\}/g, '') : "Unknown";
+
+
+  return {
+      author,
+      source,
+  };
+}
+
 async function main() {
   // Login to platform
   console.log("Logging in as " + Deno.env.get("ATP_USERNAME"));
@@ -124,7 +155,10 @@ async function main() {
 
       // Split every 300 with ellipses 
       const textThread = chunkText(parsedItem.contentSnippet);
-      textThread.push("Image Source: " + parsedItem.img_source);
+      
+      // Insert source info
+      const authorInfo = await getAuthorInfo(parsedItem.img_id);
+      textThread.push(`Author: ${authorInfo.author}\nSource: ${authorInfo.source}\nImage: ${parsedItem.img_source}`)
 
       // Bot uploads very infrequently so this is required
       console.log("Refreshing session...");
