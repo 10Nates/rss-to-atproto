@@ -6,6 +6,7 @@ const RSS_FEED =
   "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=rss&language=en";
 const MISSING_IMG_REPLACE =
   "https://upload.wikimedia.org/wikipedia/commons/a/a2/Nuvola_apps_error.svg";
+const MISSING_SOURCE_REPLACE = "Error parsing image source"
 const MISSING_DESCRIPTION_REPLACE = "No description provided";
 const IMAGE_ALT_TEXT = "Wikimedia Commons image of the day";
 const POST_TAGS = [
@@ -33,13 +34,18 @@ async function GetLatestItem(): Promise<Parser.Item> {
 
 function ParseItem(
   item: Parser.Item,
-): { img_src: string; contentSnippet: string } {
+): { img_src: string; img_source: string; contentSnippet: string } {
   const imgSrcMatch = item.content?.match(/src="([^"]+)"/);
+  const imgSourceMatch = item.content?.match(/href="([^"]+?File:[^"]+?)"/)
+
   let imgSrc = imgSrcMatch ? imgSrcMatch[1] : MISSING_IMG_REPLACE;
   imgSrc = imgSrc.replace(/\/(\d+?)px/, "/" + IMAGE_THUMB_SIZE + "px");
 
+  const imgSource = imgSourceMatch ? imgSourceMatch[1] : MISSING_SOURCE_REPLACE;
+
   return {
     img_src: imgSrc,
+    img_source: imgSource,
     contentSnippet: item.contentSnippet || MISSING_DESCRIPTION_REPLACE,
   };
 }
@@ -77,6 +83,23 @@ async function CreateEmbed(
   return data.blob;
 }
 
+function chunkText(text: string): string[] {
+  const words = text.split(" ");
+  const chunks: string[] = [""]; // It genuinely upsets me that this is recommended by the linter to be a const
+  let chunk = 0;
+  for (let i = 0; i < words.length; i++) {
+    // Including ellipses, this adds up to exactly 300
+    if ((chunks[chunk] + words[i]).length > 297) {
+      chunks[chunk] += "...";
+      chunk++;
+      chunks.push("..." + words[i]);
+    } else {
+      chunks[chunk] += words[i];
+    }
+  }
+  return chunks;
+}
+
 async function main() {
   // Login to platform
   console.log("Logging in as " + Deno.env.get("ATP_USERNAME"));
@@ -99,8 +122,9 @@ async function main() {
 
       const parsedItem = ParseItem(latestItem);
 
-      // Text cannot exceed 300 graphemes
-      const limitedText = 300 < parsedItem.contentSnippet.length ? parsedItem.contentSnippet.slice(0, 297) + "..." : parsedItem.contentSnippet;
+      // Split every 300 with ellipses 
+      const textThread = chunkText(parsedItem.contentSnippet);
+      textThread.push("Image Source: " + parsedItem.img_source);
 
       // Bot uploads very infrequently so this is required
       console.log("Refreshing session...");
@@ -109,8 +133,9 @@ async function main() {
       console.log("Uploading image...");
       const embed_blob = await CreateEmbed(parsedItem.img_src);
 
-      const post = await atp_agent.post({
-        text: limitedText,
+      // Post thread
+      const root_post = await atp_agent.post({
+        text: textThread[0],
         tags: POST_TAGS,
         langs: ["en-US"],
         createdAt: new Date().toISOString(),
@@ -122,19 +147,35 @@ async function main() {
           }],
         },
       });
-      console.log("Posted: " + post.cid + " / " + post.uri);
+
+      let last_post = root_post;
+      for (let i = 1; i < textThread.length; i++) {
+        const post = await atp_agent.post({
+          text: textThread[0],
+          tags: POST_TAGS,
+          langs: ["en-US"],
+          createdAt: new Date().toISOString(),
+          reply: {
+            root: root_post,
+            parent: last_post
+          }
+        });
+        last_post = post;
+      }
+
+      console.log("Posted threat. Root: " + root_post.cid + " / " + root_post.uri);
 
       // prevent reposts
       lastPubDate = pubDateTime;
       persistent.lastPubDate = pubDateTime.getTime();
       Deno.writeTextFileSync("./persistent.json", JSON.stringify(persistent));
-      
+
     } catch (error) {
       console.error(error);
       throw error;
     }
   }, UPDATE_FREQ);
-  
+
   // Graceful exit
   function exit() {
     console.log("Exiting...")
@@ -143,13 +184,13 @@ async function main() {
       Deno.exit(0);
     });
     setTimeout(() => {
-      console.log("Logout timed out, forcing exit."); 
+      console.log("Logout timed out, forcing exit.");
       Deno.exit(1)
     }, 2000);
   }
   Deno.addSignalListener("SIGTERM", exit);
   Deno.addSignalListener("SIGINT", exit);
-} 
+}
 
 if (import.meta.main) {
   main();
