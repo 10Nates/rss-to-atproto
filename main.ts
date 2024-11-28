@@ -1,5 +1,5 @@
 import Parser from "npm:rss-parser";
-import { Agent, CredentialSession } from "npm:@atproto/api";
+import { Agent, CredentialSession, RichText } from "npm:@atproto/api";
 import persistent from "./persistent.json" with { type: "json" };
 
 const RSS_FEED =
@@ -41,7 +41,7 @@ function ParseItem(
   let imgSrc = imgSrcMatch ? imgSrcMatch[1] : MISSING_IMG_REPLACE;
   imgSrc = imgSrc.replace(/\/(\d+?)px/, "/" + IMAGE_THUMB_SIZE + "px");
 
-  const imgSource = imgSourceMatch ? imgSourceMatch[1] : MISSING_SOURCE_REPLACE;
+  const imgSource = imgSourceMatch ? "https://commons.wikimedia.org" + imgSourceMatch[1] : MISSING_SOURCE_REPLACE;
 
   return {
     img_src: imgSrc,
@@ -89,12 +89,12 @@ function chunkText(text: string): string[] {
   let chunk = 0;
   for (let i = 0; i < words.length; i++) {
     // Including ellipses, this adds up to exactly 300
-    if ((chunks[chunk] + words[i]).length > 297) {
+    if ((chunks[chunk] + " " + words[i]).length > 297) {
       chunks[chunk] += "...";
       chunk++;
       chunks.push("..." + words[i]);
     } else {
-      chunks[chunk] += words[i];
+      chunks[chunk] += " " + words[i];
     }
   }
   return chunks;
@@ -134,8 +134,10 @@ async function main() {
       const embed_blob = await CreateEmbed(parsedItem.img_src);
 
       // Post thread
+      const root_rt = new RichText({ text: textThread[0] });
       const root_post = await atp_agent.post({
-        text: textThread[0],
+        text: root_rt.text,
+        facets: root_rt.facets,
         tags: POST_TAGS,
         langs: ["en-US"],
         createdAt: new Date().toISOString(),
@@ -150,8 +152,10 @@ async function main() {
 
       let last_post = root_post;
       for (let i = 1; i < textThread.length; i++) {
+        const rt = new RichText({ text: textThread[i] });
         const post = await atp_agent.post({
-          text: textThread[0],
+          text: rt.text,
+          facets: rt.facets,
           tags: POST_TAGS,
           langs: ["en-US"],
           createdAt: new Date().toISOString(),
@@ -163,7 +167,7 @@ async function main() {
         last_post = post;
       }
 
-      console.log("Posted threat. Root: " + root_post.cid + " / " + root_post.uri);
+      console.log("Posted thread. Root: " + root_post.cid + " / " + root_post.uri);
 
       // prevent reposts
       lastPubDate = pubDateTime;
