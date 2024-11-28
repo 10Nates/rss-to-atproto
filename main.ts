@@ -43,7 +43,7 @@ function ParseItem(
   let imgSrc = imgSrcMatch ? imgSrcMatch[1] : MISSING_IMG_REPLACE;
   imgSrc = imgSrc.replace(/\/(\d+?)px/, "/" + IMAGE_THUMB_SIZE + "px");
 
-  const imgSource = imgSourceMatch ? DOMAIN + encodeURIComponent(imgSourceMatch[1]) : MISSING_SOURCE_REPLACE;
+  const imgSource = imgSourceMatch ? DOMAIN + imgSourceMatch[1] : MISSING_SOURCE_REPLACE;
   const imgID = imgSourceMatch ? imgSourceMatch[1].replace("/wiki/", "") : MISSING_IMG_ID_REPLACE;
 
   return {
@@ -113,7 +113,6 @@ async function getAuthorInfo(img_id: string): Promise<{ author: string; source: 
   }
   const data = await response.json();
   const wikitext = data.parse.wikitext;
-  console.log(wikitext);
   const authorMatch = wikitext.match(/author\s{0,}=(.+?)\n/i);
   const sourceMatch = wikitext.match(/source\s{0,}=(.+?)\n/i);
 
@@ -157,6 +156,7 @@ async function main() {
       const textThread = chunkText(parsedItem.contentSnippet);
       
       // Insert source info
+      console.log("Fetching author info...")
       const authorInfo = await getAuthorInfo(parsedItem.img_id);
       textThread.push(`Author: ${authorInfo.author}\nSource: ${authorInfo.source}\nImage: ${parsedItem.img_source}`)
 
@@ -169,6 +169,8 @@ async function main() {
 
       // Post thread
       const root_rt = new RichText({ text: textThread[0] });
+      await root_rt.detectFacets(atp_agent);
+
       const root_post = await atp_agent.post({
         text: root_rt.text,
         facets: root_rt.facets,
@@ -187,6 +189,8 @@ async function main() {
       let last_post = root_post;
       for (let i = 1; i < textThread.length; i++) {
         const rt = new RichText({ text: textThread[i] });
+        await rt.detectFacets(atp_agent);
+
         const post = await atp_agent.post({
           text: rt.text,
           facets: rt.facets,

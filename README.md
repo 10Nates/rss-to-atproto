@@ -1,7 +1,7 @@
 # RSS to AT Protocol: Wikimedia Commons
 
-This is the source code for @wikimediadaily.bsky.social. It's designed to be customizable
-for other RSS feeds, but some rigidity is needed to extract the Wikimedia Commons images.
+This is the source code for @wikimediadaily.bsky.social. It was originally designed to be customizable
+for other RSS feeds, but too much rigidity was needed to extract the Wikimedia Commons images.
 
 ## Operation
 
