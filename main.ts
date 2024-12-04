@@ -106,7 +106,7 @@ function chunkText(text: string): string[] {
 
 async function getAuthorInfo(img_id: string): Promise<{ author: string; source: string }> {
   // https://commons.wikimedia.org/w/api.php?action=parse&format=json&page=%IMG_ID%&prop=wikitext&formatversion=2
-  const api_url = `https://commons.wikimedia.org/w/api.php?action=parse&format=json&page=${encodeURIComponent(img_id)}&prop=wikitext&formatversion=2`;
+  const api_url = `https://commons.wikimedia.org/w/api.php?action=parse&format=json&page=${img_id}&prop=wikitext&formatversion=2`;
   const response = await fetch(api_url);
   if (!response.ok) {
       throw new Error(`Failed to fetch author info: ${response.statusText}`);
