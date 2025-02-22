@@ -158,7 +158,9 @@ async function main() {
       // Insert source info
       console.log("Fetching author info...")
       const authorInfo = await getAuthorInfo(parsedItem.img_id);
-      textThread.push(`Author: ${authorInfo.author}\nSource: ${authorInfo.source}\nImage: ${parsedItem.img_source}`)
+      const authorText = `Author: ${authorInfo.author}\nSource: ${authorInfo.source}\nImage: ${parsedItem.img_source}`
+      const authorTextThread = chunkText(authorText)
+      textThread.push(...authorTextThread);
 
       // Bot uploads very infrequently so this is required
       console.log("Refreshing session...");
