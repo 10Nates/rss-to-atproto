@@ -98,7 +98,7 @@ function chunkText(text: string): string[] {
       chunk++;
       chunks.push("..." + words[i]);
     } else {
-      chunks[chunk] += " " + words[i];
+      chunks[chunk] += (i > 0 ? " " : "") + words[i];
     }
   }
   return chunks;
@@ -130,6 +130,45 @@ async function getAuthorInfo(img_id: string): Promise<{ author: string; source: 
   };
 }
 
+/**
+ * Shortens a given URL using the MediaWiki ShortenURL API.
+ *
+ * @param {string} originalUrl The URL to be shortened.
+ * @returns {Promise<string>} A promise that resolves with the shortened URL string.
+ * @throws {Error} If the API call fails or the response is not as expected.
+ */
+export async function shortenWikimediaUrl(originalUrl: string): Promise<string> {
+  // Encode the original URL to ensure it's safe for inclusion in the query string.
+  const encodedUrl = encodeURIComponent(originalUrl);
+
+  // Construct the full API endpoint URL.
+  const apiUrl = `https://www.mediawiki.org/w/api.php?action=shortenurl&format=json&url=${encodedUrl}&formatversion=2`;
+
+  try {
+    // Make the asynchronous fetch request to the MediaWiki API.
+    const response = await fetch(apiUrl, { method: "POST" });
+
+    // Check if the HTTP response was successful.
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Parse the JSON response body.
+    const data = await response.json();
+
+    // Check if the expected 'shortenurl' object and 'shorturl' property exist in the response.
+    if (data && data.shortenurl && data.shortenurl.shorturl) {
+      // Return the shortened URL string.
+      return data.shortenurl.shorturl;
+    } else {
+      // If the expected data structure is not found, throw an error.
+      throw new Error("Invalid API response structure: 'shorturl' not found.");
+    }
+  } catch (error) {
+    throw error; // Re-throw the error for the caller to handle.
+  }
+}
+
 async function main() {
   // Login to platform
   console.log("Logging in as " + Deno.env.get("ATP_USERNAME"));
@@ -151,6 +190,15 @@ async function main() {
       console.log("New RSS post detected");
 
       const parsedItem = ParseItem(latestItem);
+
+      // Remove page cache marker
+      parsedItem.contentSnippet = parsedItem.contentSnippet.replace("(purge this page's cache)\n", "").replaceAll(/\n{3,}/g, "\n\n")
+
+      // Fix url in the case it is too long
+      if (parsedItem.img_source.length > 150) {
+        console.log("Shortening image URL...")
+        parsedItem.img_source = await shortenWikimediaUrl(parsedItem.img_source)
+      }
 
       // Split every 300 with ellipses 
       const textThread = chunkText(parsedItem.contentSnippet);
@@ -188,6 +236,12 @@ async function main() {
         },
       });
 
+      // Prevent reposts
+      // This is done early to prevent spamming in case there is an error posting child posts
+      lastPubDate = pubDateTime;
+      persistent.lastPubDate = pubDateTime.getTime();
+      Deno.writeTextFileSync("./persistent.json", JSON.stringify(persistent));
+
       let last_post = root_post;
       for (let i = 1; i < textThread.length; i++) {
         const rt = new RichText({ text: textThread[i] });
@@ -208,12 +262,6 @@ async function main() {
       }
 
       console.log("Posted thread. Root: " + root_post.cid + " / " + root_post.uri);
-
-      // prevent reposts
-      lastPubDate = pubDateTime;
-      persistent.lastPubDate = pubDateTime.getTime();
-      Deno.writeTextFileSync("./persistent.json", JSON.stringify(persistent));
-
     } catch (error) {
       console.error(error);
       throw error;
