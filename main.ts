@@ -130,42 +130,26 @@ async function getAuthorInfo(img_id: string): Promise<{ author: string; source: 
   };
 }
 
-/**
- * Shortens a given URL using the MediaWiki ShortenURL API.
- *
- * @param {string} originalUrl The URL to be shortened.
- * @returns {Promise<string>} A promise that resolves with the shortened URL string.
- * @throws {Error} If the API call fails or the response is not as expected.
- */
-export async function shortenWikimediaUrl(originalUrl: string): Promise<string> {
-  // Encode the original URL to ensure it's safe for inclusion in the query string.
-  const encodedUrl = encodeURIComponent(originalUrl);
-
-  // Construct the full API endpoint URL.
-  const apiUrl = `https://www.mediawiki.org/w/api.php?action=shortenurl&format=json&url=${encodedUrl}&formatversion=2`;
-
+async function shortenURL(originalUrl: string): Promise<string | null> {
   try {
-    // Make the asynchronous fetch request to the MediaWiki API.
-    const response = await fetch(apiUrl, { method: "POST" });
+    const response = await fetch('https://cleanuri.com/api/v1/shorten', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `url=${encodeURIComponent(originalUrl)}`,
+    });
 
-    // Check if the HTTP response was successful.
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      console.error(`Error shortening URL: ${response.status}`);
+      throw response
     }
 
-    // Parse the JSON response body.
     const data = await response.json();
-
-    // Check if the expected 'shortenurl' object and 'shorturl' property exist in the response.
-    if (data && data.shortenurl && data.shortenurl.shorturl) {
-      // Return the shortened URL string.
-      return data.shortenurl.shorturl;
-    } else {
-      // If the expected data structure is not found, throw an error.
-      throw new Error("Invalid API response structure: 'shorturl' not found.");
-    }
+    return data.result_url;
   } catch (error) {
-    throw error; // Re-throw the error for the caller to handle.
+    console.error('Network error or invalid response:', error);
+    throw error
   }
 }
 
@@ -195,9 +179,9 @@ async function main() {
       parsedItem.contentSnippet = parsedItem.contentSnippet.replace("(purge this page's cache)\n", "").replaceAll(/\n{3,}/g, "\n\n")
 
       // Fix url in the case it is too long
-      if (parsedItem.img_source.length > 150) {
+      if (parsedItem.img_source.length > 290) {
         console.log("Shortening image URL...")
-        parsedItem.img_source = await shortenWikimediaUrl(parsedItem.img_source)
+        parsedItem.img_source = await shortenURL(parsedItem.img_source)
       }
 
       // Split every 300 with ellipses 
