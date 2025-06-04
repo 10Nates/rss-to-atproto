@@ -130,7 +130,7 @@ async function getAuthorInfo(img_id: string): Promise<{ author: string; source: 
   };
 }
 
-async function shortenURL(originalUrl: string): Promise<string | null> {
+async function shortenURL(originalUrl: string): Promise<string> {
   try {
     const response = await fetch('https://cleanuri.com/api/v1/shorten', {
       method: 'POST',
